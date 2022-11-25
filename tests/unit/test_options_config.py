@@ -227,8 +227,10 @@ def test_load_config_missing_append_config_raise_exception():
         config.load_config(None, ["dont_exist_config.cfg"], isolated=False)
 
 
-def test_invalid_ignore_codes_raise_error(tmpdir, opt_manager):
-    tmpdir.join("setup.cfg").write("[flake8]\nignore = E203, //comment")
+@pytest.mark.parametrize("option", ("ignore", "extend-ignore"))
+@pytest.mark.parametrize("comment_start", ("#", "//"))
+def test_inline_comment_codes_raise_error(tmpdir, opt_manager, option, comment_start):
+    tmpdir.join("setup.cfg").write(f"[flake8]\n{option} = E203, {comment_start}comment")
     with tmpdir.as_cwd():
         cfg, _ = config.load_config("setup.cfg", [], isolated=False)
 
@@ -236,15 +238,16 @@ def test_invalid_ignore_codes_raise_error(tmpdir, opt_manager):
         config.parse_config(opt_manager, cfg, tmpdir)
 
     expected = (
-        "Error code '//comment' supplied to 'ignore' option "
-        "does not match '^[A-Z]{1,3}[0-9]{0,3}$'"
+        f"Inline comments are not supported in flake8 config. "
+        f"Found one in the '{option}' option: 'E203, {comment_start}comment'"
     )
     (msg,) = excinfo.value.args
     assert msg == expected
 
 
-def test_invalid_extend_ignore_codes_raise_error(tmpdir, opt_manager):
-    tmpdir.join("setup.cfg").write("[flake8]\nextend-ignore = E203, //comment")
+@pytest.mark.parametrize("option", ("ignore", "extend-ignore"))
+def test_invalid_config_codes_raise_error(tmpdir, opt_manager, option):
+    tmpdir.join("setup.cfg").write(f"[flake8]\n{option} = E2034")
     with tmpdir.as_cwd():
         cfg, _ = config.load_config("setup.cfg", [], isolated=False)
 
@@ -252,8 +255,8 @@ def test_invalid_extend_ignore_codes_raise_error(tmpdir, opt_manager):
         config.parse_config(opt_manager, cfg, tmpdir)
 
     expected = (
-        "Error code '//comment' supplied to 'extend-ignore' option "
-        "does not match '^[A-Z]{1,3}[0-9]{0,3}$'"
+        f"Error code 'E2034' supplied to '{option}' option "
+        "does not match '^[A-Z]{1,3}[0-9]{0,3}$'. Config line: 'E2034'"
     )
     (msg,) = excinfo.value.args
     assert msg == expected

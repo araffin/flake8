@@ -127,11 +127,18 @@ def parse_config(
 
         if option_name in {"ignore", "extend-ignore"}:
             for error_code in final_value:
+                if error_code.startswith("#") or error_code.startswith("//"):
+                    raise ValueError(
+                        "Inline comments are not supported in flake8 config. "
+                        f"Found one in the {option_name!r} option: "
+                        f"{value!r}"
+                    )
                 if not VALID_CODE_PREFIX.match(error_code):
                     raise ValueError(
                         f"Error code {error_code!r} "
                         f"supplied to {option_name!r} option "
-                        f"does not match {VALID_CODE_PREFIX.pattern!r}"
+                        f"does not match {VALID_CODE_PREFIX.pattern!r}. "
+                        f"Config line: {value!r}"
                     )
 
         assert option.config_name is not None
